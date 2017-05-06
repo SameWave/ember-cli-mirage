@@ -190,6 +190,52 @@ class Model {
     return this.associationFor(key).inverse();
   }
 
+  /**
+   * Returns this model's inverse association for the given
+   * model-type-association pair, if it exists.
+   *
+   * @method hasInverseFor
+   * @param {String} modelName
+   * @param {ORM/Association} association
+   * @return {ORM/Association}
+   * @public
+   */
+  inverseFor(modelName, association) {
+    let associations = this._schema.associationsFor(this.modelName);
+
+    return _values(associations)
+      .filter(candidate => candidate.modelName === modelName)
+      .reduce((inverse, candidate) => {
+        let candidateInverse = candidate.opts.inverse;
+        let candidateIsImplicitInverse = (!candidateInverse);
+        let candidateIsExplicitInverse = (candidateInverse === association.key);
+        let candidateMatches = candidateIsImplicitInverse || candidateIsExplicitInverse;
+
+        if (candidateMatches) {
+          // Need to move this check to compile-time init
+          assert(!inverse, `The ${this.modelName} model has multiple possible inverse associations for the ${association.key} association on the ${association.ownerModelName} model.`);
+
+          inverse = candidate;
+        }
+
+        return inverse;
+      }, null);
+  }
+
+  /**
+   * Returns whether this model has an inverse association for the given
+   * model-type-association pair.
+   *
+   * @method hasInverseFor
+   * @param {String} modelName
+   * @param {ORM/Association} association
+   * @return {Boolean}
+   * @public
+   */
+  hasInverseFor(modelName, association) {
+    return !!this.inverseFor(modelName, association);
+  }
+
   associate(model, association) {
     let { key } = association;
 

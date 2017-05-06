@@ -123,18 +123,34 @@ export default class BelongsTo extends Association {
       /*
         object.parent = (parentModel)
           - sets the associated parent via model
+
+        I want to jot some notes about hasInverseFor. There used to be an
+        association.inverse() check, but adding polymorphic associations
+        complicated this. `comment.commentable`, you can't easily check for an
+        inverse since `comments: hasMany()` could be on any model.
+
+        Instead of making it very complex and looking for an inverse on the
+        association in isoaltion, it was much simpler to ask the model being
+        passed in if it had an inverse for the setting model and with its
+        association.
       */
       set(model) {
         this._tempAssociations = this._tempAssociations || {};
         this._tempAssociations[key] = model;
 
-        if (
-          model
-          && association.inverse()
-          && !association.inversesAlreadyAssociated(model, this) // check for an existing match, to avoid recursion
-        )  {
-          model.associate(this, association.inverse());
+        if (model && model.hasInverseFor(this.modelName, association)) {
+          let inverse = model.hasInverseFor(this.modelName, association);
+
+          model.associate(this, inverse);
         }
+
+        // if (
+        //   model
+        //   && association.inverse()
+        //   && !association.inversesAlreadyAssociated(model, this) // check for an existing match, to avoid recursion
+        // )  {
+        //   model.associate(this, association.inverse());
+        // }
       }
     });
 
