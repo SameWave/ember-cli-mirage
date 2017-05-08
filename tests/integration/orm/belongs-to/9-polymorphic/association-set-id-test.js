@@ -1,7 +1,7 @@
 import Helper, { states } from './_helper';
-import { module, test } from 'qunit';
+import { module, skip } from 'qunit';
 
-module('Integration | ORM | Belongs To | Basic | association #setId', {
+module('Integration | ORM | Belongs To | Polymorphic | association #setId', {
   beforeEach() {
     this.helper = new Helper();
   }
@@ -12,7 +12,7 @@ module('Integration | ORM | Belongs To | Basic | association #setId', {
 */
 states.forEach((state) => {
 
-  test(`a ${state} can update its association to a saved parent via parentId`, function(assert) {
+  skip(`a ${state} can update its association to a saved parent via parentId`, function(assert) {
     let [ post ] = this.helper[state]();
     let savedAuthor = this.helper.savedParent();
 
@@ -29,7 +29,7 @@ states.forEach((state) => {
   'newChildSavedParent'
 ].forEach((state) => {
 
-  test(`a ${state} can clear its association via a null parentId`, function(assert) {
+  skip(`a ${state} can clear its association via a null parentId`, function(assert) {
     let [ post ] = this.helper[state]();
 
     post.authorId = null;

@@ -1,7 +1,7 @@
 import Helper, { states } from './_helper';
-import { module, test } from 'qunit';
+import { module, skip } from 'qunit';
 
-module('Integration | ORM | Belongs To | Basic | association #set', {
+module('Integration | ORM | Belongs To | Polymorphic | association #set', {
   beforeEach() {
     this.helper = new Helper();
   }
@@ -12,7 +12,7 @@ module('Integration | ORM | Belongs To | Basic | association #set', {
 */
 states.forEach((state) => {
 
-  test(`a ${state} can update its association to a saved parent`, function(assert) {
+  skip(`a ${state} can update its association to a saved parent`, function(assert) {
     let [ post ] = this.helper[state]();
     let savedAuthor = this.helper.savedParent();
 
@@ -22,7 +22,7 @@ states.forEach((state) => {
     assert.deepEqual(post.author, savedAuthor);
   });
 
-  test(`a ${state} can update its association to a new parent`, function(assert) {
+  skip(`a ${state} can update its association to a new parent`, function(assert) {
     let [ post ] = this.helper[state]();
     let newAuthor = this.helper.newParent();
 
@@ -32,7 +32,7 @@ states.forEach((state) => {
     assert.deepEqual(post.author, newAuthor);
   });
 
-  test(`a ${state} can update its association to a null parent`, function(assert) {
+  skip(`a ${state} can update its association to a null parent`, function(assert) {
     let [ post ] = this.helper[state]();
 
     post.author = null;

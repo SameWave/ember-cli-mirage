@@ -139,7 +139,7 @@ export default class BelongsTo extends Association {
         this._tempAssociations[key] = model;
 
         if (model && model.hasInverseFor(this.modelName, association)) {
-          let inverse = model.hasInverseFor(this.modelName, association);
+          let inverse = model.inverseFor(this.modelName, association);
 
           model.associate(this, inverse);
         }

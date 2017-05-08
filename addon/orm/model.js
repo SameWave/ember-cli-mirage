@@ -180,19 +180,39 @@ class Model {
   }
 
   /**
-   * Returns the inverse association, if it exists
-   *
-   * @method inverseAssociationFor
-   * @param key
-   * @public
-   */
-  inverseAssociationFor(key) {
-    return this.associationFor(key).inverse();
-  }
-
-  /**
    * Returns this model's inverse association for the given
    * model-type-association pair, if it exists.
+   *
+   * Example:
+
+         post: Model.extend({
+           comments: hasMany()
+         }),
+         comments: Model.extend({
+           post: belongsTo()
+         })
+
+     post.inversefor('comment', commentsAssociation) would return the
+     `comment.post` association object.
+
+     Originally we had association.inverse() but that became impossible with
+     the addition of polymorphic models. Consider the following:
+
+         post: Model.extend({
+           comments: hasMany()
+         }),
+         picture: Model.extend({
+           comments: hasMany()
+         }),
+         comments: Model.extend({
+           commentable: belongsTo({ polymorphic: true })
+         })
+
+     `comment.commentable.inverse()` is ambiguous - does it return
+     `post.comments` or `picture.comments`? Instead you need the type you're
+     looking for. `comment.inverseFor('post', comment.commentable)` is no
+     longer ambiguous.
+   *
    *
    * @method hasInverseFor
    * @param {String} modelName
@@ -207,7 +227,7 @@ class Model {
       .filter(candidate => candidate.modelName === modelName)
       .reduce((inverse, candidate) => {
         let candidateInverse = candidate.opts.inverse;
-        let candidateIsImplicitInverse = (!candidateInverse);
+        let candidateIsImplicitInverse = candidateInverse === undefined;
         let candidateIsExplicitInverse = (candidateInverse === association.key);
         let candidateMatches = candidateIsImplicitInverse || candidateIsExplicitInverse;
 
@@ -236,7 +256,34 @@ class Model {
     return !!this.inverseFor(modelName, association);
   }
 
+  /**
+   * Used to check if models match each other. If models are saved, we check model type
+   * and id, since they could have other non-persisted properties that are different.
+   *
+   * @public
+  */
+  alreadyAssociatedWith(model, association) {
+    let { key } = association;
+    let associatedModelOrCollection = this[key];
+
+    if (associatedModelOrCollection && model) {
+      if (associatedModelOrCollection instanceof Model) {
+        if (associatedModelOrCollection.isSaved() && model.isSaved()) {
+          return associatedModelOrCollection.toString() === model.toString();
+        } else {
+          return associatedModelOrCollection === model;
+        }
+      } else {
+        return associatedModelOrCollection.includes(model);
+      }
+    }
+  }
+
   associate(model, association) {
+    if (this.alreadyAssociatedWith(model, association)) {
+      return;
+    }
+
     let { key } = association;
 
     if (association.constructor.name === 'HasMany') {
@@ -464,17 +511,20 @@ class Model {
   _disassociateFromBelongsToInverse(association) {
     let { key } = association;
     let fk = association.getForeignKey();
-    let inverse = association.inverse();
     let tempAssociation = this._tempAssociations && this._tempAssociations[key];
-    let oldInversesExist = this.attrs[fk];
+    let oldInverses = this.attrs[fk];
 
-    if (inverse && (tempAssociation !== undefined) && oldInversesExist) {
+    if ((tempAssociation !== undefined) && oldInverses) {
       // Disassociate currently persisted models that are no longer associated
       let model = this._schema[toCollectionName(association.modelName)]
-        .find(this.attrs[fk]);
+        .find(oldInverses);
 
-      model.disassociate(this, inverse);
-      model._updateInDb(model.attrs);
+      if (this.hasInverseFor(model.modelName, association)) {
+        let inverse = this.inverseFor(model.modelName, association);
+
+        model.disassociate(this, inverse);
+        model._updateInDb(model.attrs);
+      }
     }
   }
 
@@ -514,29 +564,65 @@ class Model {
     }
   }
 
+  /*
+    Step 3 in saving associations.
+
+    Example:
+
+      // initial state
+      post.author = steinbeck;
+
+      // new state
+      post.author = twain;
+
+       1. Disassociate from old inverse (remove post from steinbeck.posts)
+       2. Save new associates (if twain.isNew, save twain)
+    -> 3. Associate with new inverse (add post to twain.posts)
+  */
   _associateWithNewInverse(association) {
+    let modelOrCollection = this[association.key];
     let fk = association.getForeignKey();
-    let inverse = association.inverse();
 
-    if (this[fk] && inverse && (inverse.constructor.name === 'BelongsTo') && !this.__isSavingNewChildren) {
-      let inverseFk = inverse.getForeignKey();
+    if (!this.__isSavingNewChildren) {
+      if (modelOrCollection instanceof Model) {
+        if (modelOrCollection.hasInverseFor(this.modelName, association)) {
+          let inverse = modelOrCollection.inverseFor(this.modelName, association);
+          let inverseFk = inverse.getForeignKey();
 
-      this._schema.db[toCollectionName(association.modelName)]
-        .update(this[fk], { [inverseFk]: this.id });
+          this._schema.db[toCollectionName(association.modelName)]
+            .update(this[fk], { [inverseFk]: this.id });
+        }
 
-    } else if (this[fk] && inverse && (inverse.constructor.name === 'HasMany') && !this.__isSavingNewChildren) {
-      let inverseFk = inverse.getForeignKey();
-      let inverseCollection = this._schema.db[toCollectionName(association.modelName)];
-      let currentIdsForInverse = inverseCollection.find(this[fk])[inverse.getForeignKey()] || [];
-      let newIdsForInverse = currentIdsForInverse;
-
-      if (newIdsForInverse.indexOf(this.id) === -1) {
-        newIdsForInverse.push(this.id);
+      } else if (modelOrCollection instanceof Collection) {
+        // TODO
       }
-
-      inverseCollection.update(this[fk], { [inverseFk]: newIdsForInverse });
     }
   }
+
+  // original
+  // _associateWithNewInverse(association) {
+  //   let fk = association.getForeignKey();
+  //   let inverse = association.inverse();
+  //
+  //   if (this[fk] && inverse && (inverse.constructor.name === 'BelongsTo') && !this.__isSavingNewChildren) {
+  //     let inverseFk = inverse.getForeignKey();
+  //
+  //     this._schema.db[toCollectionName(association.modelName)]
+  //       .update(this[fk], { [inverseFk]: this.id });
+  //
+  //   } else if (this[fk] && inverse && (inverse.constructor.name === 'HasMany') && !this.__isSavingNewChildren) {
+  //     let inverseFk = inverse.getForeignKey();
+  //     let inverseCollection = this._schema.db[toCollectionName(association.modelName)];
+  //     let currentIdsForInverse = inverseCollection.find(this[fk])[inverse.getForeignKey()] || [];
+  //     let newIdsForInverse = currentIdsForInverse;
+  //
+  //     if (newIdsForInverse.indexOf(this.id) === -1) {
+  //       newIdsForInverse.push(this.id);
+  //     }
+  //
+  //     inverseCollection.update(this[fk], { [inverseFk]: newIdsForInverse });
+  //   }
+  // }
 
   _associateWithNewInverses(association) {
     let fk = association.getForeignKey();

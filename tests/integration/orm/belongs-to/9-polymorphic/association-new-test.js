@@ -1,7 +1,7 @@
 import Helper, { states } from './_helper';
-import { module, test } from 'qunit';
+import { module, skip } from 'qunit';
 
-module('Integration | ORM | Belongs To | Basic | association #new', {
+module('Integration | ORM | Belongs To | Polymorphic | association #new', {
   beforeEach() {
     this.helper = new Helper();
   }
@@ -13,7 +13,7 @@ module('Integration | ORM | Belongs To | Basic | association #new', {
 
 states.forEach((state) => {
 
-  test(`a ${state} can build a new associated parent`, function(assert) {
+  skip(`a ${state} can build a new associated parent`, function(assert) {
     let [ post ] = this.helper[state]();
 
     let ganon = post.newAuthor({ name: 'Ganon' });

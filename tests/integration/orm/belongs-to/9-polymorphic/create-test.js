@@ -1,15 +1,15 @@
 import Helper from './_helper';
 import { Model } from 'ember-cli-mirage';
-import { module, test } from 'qunit';
+import { module, skip } from 'qunit';
 
-module('Integration | ORM | Belongs To | Basic | create', {
+module('Integration | ORM | Belongs To | Polymorphic | create', {
   beforeEach() {
     this.helper = new Helper();
     this.helper.schema.registerModel('foo', Model);
   }
 });
 
-test('it sets up associations correctly when passing in the foreign key', function(assert) {
+skip('it sets up associations correctly when passing in the foreign key', function(assert) {
   let author = this.helper.schema.create('author');
   let post = this.helper.schema.create('post', {
     authorId: author.id
@@ -23,7 +23,7 @@ test('it sets up associations correctly when passing in the foreign key', functi
   assert.deepEqual(this.helper.schema.db.posts[0], { id: '1', authorId: '1' });
 });
 
-test('it sets up associations correctly when passing in the association itself', function(assert) {
+skip('it sets up associations correctly when passing in the association itself', function(assert) {
   let author = this.helper.schema.create('author');
   let post = this.helper.schema.create('post', {
     author
@@ -37,7 +37,7 @@ test('it sets up associations correctly when passing in the association itself',
   assert.deepEqual(this.helper.schema.db.posts[0], { id: '1', authorId: '1' });
 });
 
-test('it throws an error if a model is passed in without a defined relationship', function(assert) {
+skip('it throws an error if a model is passed in without a defined relationship', function(assert) {
   let { schema } = this.helper;
 
   assert.throws(function() {
@@ -47,7 +47,7 @@ test('it throws an error if a model is passed in without a defined relationship'
   }, /you haven't defined that key as an association on your model/);
 });
 
-test('it throws an error if a collection is passed in without a defined relationship', function(assert) {
+skip('it throws an error if a collection is passed in without a defined relationship', function(assert) {
   let { schema } = this.helper;
   schema.create('foo');
   schema.create('foo');
