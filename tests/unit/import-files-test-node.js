@@ -1,4 +1,5 @@
 /* eslint-env node */
+import require from 'require';
 
 var expect = require('chai').expect;
 var EmberAddon = require('ember-cli/lib/broccoli/ember-addon');
